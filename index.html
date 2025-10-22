@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bitcoin Clicker</title>
-    
+
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
@@ -20,7 +21,7 @@
         #game-container {
             text-align: center;
             background-color: #ffffff;
-            padding: 2rem 3rem;
+            padding: 2rem;
             border-radius: 12px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
@@ -33,8 +34,9 @@
 
         p {
             font-size: 1.5rem;
-            margin-top: 0;
-            margin-bottom: 2rem;
+            margin: 0;
+            margin-bottom: 1rem;
+            min-height: 50px; /* Reserve space for stats */
         }
 
         /* This styles the score display */
@@ -63,61 +65,159 @@
             transform: scale(0.95);
             background-color: #e68917;
         }
+
+        /* --- Shop Styles --- */
+        #shop-container {
+            margin-top: 2rem;
+            background-color: #fff;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            width: 350px;
+        }
+
+        .shop-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .shop-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .item-details {
+            text-align: left;
+        }
+
+        .item-details p {
+            font-size: 0.9rem;
+            color: #666;
+            margin: 0.25rem 0 0 0;
+            min-height: 0;
+        }
+
+        .buy-button {
+            background-color: #4CAF50; /* Green */
+            color: white;
+            border: none;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .buy-button:hover {
+            background-color: #45a049;
+        }
+
+        .buy-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
 
     <div id="game-container">
         <h1>Bitcoin Clicker</h1>
-        <p>Your Bitcoins: <span id="score-display">0</span></p>
+        <p>
+            Your Bitcoins: <span id="score-display">0</span><br>
+            <small id="stats-display"></small>
+        </p>
         <button id="click-button">Mine Bitcoin!</button>
+    </div>
+
+    <div id="shop-container">
+        <!-- Shop items will be dynamically inserted here by JavaScript -->
     </div>
 
     <script>
         // Get references to our HTML elements
         const scoreDisplay = document.getElementById('score-display');
+        const statsDisplay = document.getElementById('stats-display');
         const clickButton = document.getElementById('click-button');
+        const shopContainer = document.getElementById('shop-container');
 
         // Initialize score
         let score = 0;
+        let bitcoinsPerClick = 1;
+        let bitcoinsPerSecond = 0;
+
+        // --- Shop Items Definition ---
+        // We define our upgrades here. The cost will increase dynamically.
+        let upgrades = {
+            clickPower: {
+                name: 'Better Mouse',
+                level: 0,
+                baseCost: 10,
+                increase: 1, // How much BPC it adds per level
+                description: 'Increases bitcoins per click by 1'
+            },
+            autoMiner: {
+                name: 'GPU Miner',
+                level: 0,
+                baseCost: 50,
+                increase: 1, // How much BPS it adds per level
+                description: 'Automatically mines 1 bitcoin per second'
+            }
+        };
+
+        // --- Calculate cost for an upgrade ---
+        function calculateCost(item) {
+            // Cost increases exponentially for each level
+            return Math.floor(item.baseCost * Math.pow(1.15, item.level));
+        }
 
         // --- Load the score from localStorage ---
-        // We use localStorage to save the score so it persists after closing the browser
         function loadGame() {
-            // Get the saved score from localStorage. It's stored as a string.
             const savedScore = localStorage.getItem('bitcoinScore');
-
-            // Check if a saved score exists
             if (savedScore !== null) {
-                // Convert the saved score (string) back to a number
                 score = parseInt(savedScore, 10);
             }
-            
-            // Update the display with the loaded score
+
+            const savedUpgrades = localStorage.getItem('bitcoinUpgrades');
+            if (savedUpgrades) {
+                upgrades = JSON.parse(savedUpgrades);
+            }
+
+            recalculateStats();
             updateScoreDisplay();
+            renderShop();
         }
 
         // --- Save the score to localStorage ---
         function saveGame() {
-            // localStorage can only store strings, so we pass the number 'score'
             localStorage.setItem('bitcoinScore', score);
+            localStorage.setItem('bitcoinUpgrades', JSON.stringify(upgrades));
         }
 
         // --- Update the score display ---
         function updateScoreDisplay() {
-            scoreDisplay.textContent = score;
+            scoreDisplay.textContent = Math.floor(score);
+            statsDisplay.textContent = `(${bitcoinsPerClick}/click, ${bitcoinsPerSecond}/sec)`;
+            // After updating the score, check if we can afford new items
+            updateShopButtons();
+        }
+
+        // --- Recalculate BPC and BPS from upgrade levels ---
+        function recalculateStats() {
+            bitcoinsPerClick = 1 + (upgrades.clickPower.level * upgrades.clickPower.increase);
+            bitcoinsPerSecond = upgrades.autoMiner.level * upgrades.autoMiner.increase;
         }
 
         // --- Handle the click event ---
         clickButton.addEventListener('click', () => {
             // 1. Increment the score
-            score = score + 1;
+            score += bitcoinsPerClick;
             
             // 2. Update the visual display
             updateScoreDisplay();
-            
-            // 3. Save the new score to localStorage
-            saveGame();
         });
 
         // --- Load the game when the page starts ---
@@ -126,6 +226,71 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadGame();
         });
+
+        // --- Shop Logic ---
+
+        function renderShop() {
+            shopContainer.innerHTML = ''; // Clear existing shop items
+            for (const key in upgrades) {
+                const item = upgrades[key];
+                const cost = calculateCost(item);
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'shop-item';
+                itemDiv.innerHTML = `
+                    <div class="item-details">
+                        <strong>${item.name} (Lvl ${item.level})</strong>
+                        <p>${item.description}</p>
+                    </div>
+                    <button id="buy-${key}" class="buy-button" data-item="${key}">
+                        Cost: ${cost}
+                    </button>
+                `;
+                shopContainer.appendChild(itemDiv);
+            }
+
+            // Add event listeners to the new buttons
+            document.querySelectorAll('.buy-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    buyItem(e.target.dataset.item);
+                });
+            });
+
+            updateShopButtons();
+        }
+
+        function buyItem(key) {
+            const item = upgrades[key];
+            const cost = calculateCost(item);
+
+            if (score >= cost) {
+                score -= cost;
+                item.level++;
+                recalculateStats();
+                updateScoreDisplay();
+                renderShop(); // Re-render to show new level and cost
+            }
+        }
+
+        function updateShopButtons() {
+            for (const key in upgrades) {
+                const button = document.getElementById(`buy-${key}`);
+                if (button) {
+                    const cost = calculateCost(upgrades[key]);
+                    button.disabled = score < cost;
+                }
+            }
+        }
+
+        // --- Game Loop for passive income ---
+        setInterval(() => {
+            if (bitcoinsPerSecond > 0) {
+                score += bitcoinsPerSecond;
+                updateScoreDisplay();
+            }
+            saveGame(); // Save the game periodically
+        }, 1000); // Runs every 1000ms (1 second)
+
     </script>
 
 </body>
