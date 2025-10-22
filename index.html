@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitcoin Clicker</title>
+    <title>BluCoin Clicker</title>
 
     <style>
         body {
@@ -13,22 +13,50 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background-color: #f0f2f5;
-            color: #333;
+            background-color: #1e1e1e; /* Dark background */
+            color: #e0e0e0; /* Light text */
             margin: 0;
         }
 
         #game-container {
             text-align: center;
-            background-color: #ffffff;
+            background-color: #2c2c2c; /* Slightly lighter dark container */
+            position: relative; /* Needed for positioning the mute button */
             padding: 2rem;
             border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        #mute-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: transparent;
+            border: none;
+            font-size: 1.75rem;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        #mute-button:hover {
+            opacity: 1;
+        }
+
+        /* --- Animation for the H1 title --- */
+        @keyframes spinAndDance {
+            0% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(10deg) scale(1.1); }
+            50% { transform: rotate(-10deg) scale(1.1); }
+            75% { transform: rotate(5deg) scale(1.1); }
+            100% { transform: rotate(0deg) scale(1); }
+        }
+        .h1-animated {
+            animation: spinAndDance 0.7s ease-in-out;
         }
 
         h1 {
             font-size: 2.5rem;
-            color: #f7931a;
+            color: #4dabf7; /* A nice, vibrant blue */
             margin-bottom: 0.5rem;
         }
 
@@ -43,12 +71,12 @@
         #score-display {
             font-weight: bold;
             font-size: 3rem;
-            color: #000;
+            color: #ffffff; /* Pure white for emphasis */
         }
 
         /* This styles the main click button */
         #click-button {
-            background-color: #f7931a;
+            background-color: #4dabf7; /* Changed from orange to blue */
             color: white;
             border: none;
             padding: 1rem 2rem;
@@ -63,16 +91,16 @@
         /* This makes the button "pop" when clicked */
         #click-button:active {
             transform: scale(0.95);
-            background-color: #e68917;
+            background-color: #3c9de6; /* A slightly darker blue for active state */
         }
 
         /* --- Shop Styles --- */
         #shop-container {
             margin-top: 2rem;
-            background-color: #fff;
+            background-color: #2c2c2c; /* Matching dark container */
             padding: 1.5rem;
             border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             width: 350px;
         }
 
@@ -82,7 +110,7 @@
             align-items: center;
             margin-bottom: 1rem;
             padding: 1rem;
-            background-color: #f9f9f9;
+            background-color: #3a3a3a; /* Darker item background */
             border-radius: 8px;
         }
 
@@ -96,7 +124,7 @@
 
         .item-details p {
             font-size: 0.9rem;
-            color: #666;
+            color: #b0b0b0; /* Lighter grey for readability */
             margin: 0.25rem 0 0 0;
             min-height: 0;
         }
@@ -117,7 +145,8 @@
         }
 
         .buy-button:disabled {
-            background-color: #cccccc;
+            background-color: #555; /* Darker disabled state */
+            color: #999;
             cursor: not-allowed;
         }
     </style>
@@ -125,17 +154,21 @@
 <body>
 
     <div id="game-container">
-        <h1>Bitcoin Clicker</h1>
+        <button id="mute-button">🔇</button>
+        <h1>BluCoin Clicker</h1>
         <p>
-            Your Bitcoins: <span id="score-display">0</span><br>
+            Your BluCoin: <span id="score-display">0</span><br>
             <small id="stats-display"></small>
         </p>
-        <button id="click-button">Mine Bitcoin!</button>
+        <button id="click-button">Mine BluCoin!</button>
     </div>
 
     <div id="shop-container">
         <!-- Shop items will be dynamically inserted here by JavaScript -->
     </div>
+
+    <!-- Add your music file here. 'loop' makes it repeat. -->
+    <audio id="background-music" src="music.mp3" loop></audio>
 
     <script>
         // Get references to our HTML elements
@@ -143,11 +176,15 @@
         const statsDisplay = document.getElementById('stats-display');
         const clickButton = document.getElementById('click-button');
         const shopContainer = document.getElementById('shop-container');
+        const music = document.getElementById('background-music');
+        const muteButton = document.getElementById('mute-button');
 
         // Initialize score
         let score = 0;
         let bitcoinsPerClick = 1;
         let bitcoinsPerSecond = 0;
+        let totalClicks = 0;
+        let isMuted = true; // Start muted by default
 
         // --- Shop Items Definition ---
         // We define our upgrades here. The cost will increase dynamically.
@@ -157,14 +194,14 @@
                 level: 0,
                 baseCost: 10,
                 increase: 1, // How much BPC it adds per level
-                description: 'Increases bitcoins per click by 1'
+                description: 'Increases BluCoin per click by 1'
             },
             autoMiner: {
                 name: 'GPU Miner',
                 level: 0,
                 baseCost: 50,
                 increase: 1, // How much BPS it adds per level
-                description: 'Automatically mines 1 bitcoin per second'
+                description: 'Automatically mines 1 BluCoin per second'
             }
         };
 
@@ -186,15 +223,29 @@
                 upgrades = JSON.parse(savedUpgrades);
             }
 
+            const savedClicks = localStorage.getItem('bitcoinTotalClicks');
+            if (savedClicks !== null) {
+                totalClicks = parseInt(savedClicks, 10);
+            }
+
+            const savedMuteState = localStorage.getItem('bitcoinMuted');
+            if (savedMuteState !== null) {
+                // We parse it from a string 'true'/'false' back to a boolean
+                isMuted = JSON.parse(savedMuteState);
+            }
+
             recalculateStats();
             updateScoreDisplay();
             renderShop();
+            applyMuteState();
         }
 
         // --- Save the score to localStorage ---
         function saveGame() {
             localStorage.setItem('bitcoinScore', score);
             localStorage.setItem('bitcoinUpgrades', JSON.stringify(upgrades));
+            localStorage.setItem('bitcoinTotalClicks', totalClicks);
+            localStorage.setItem('bitcoinMuted', isMuted);
         }
 
         // --- Update the score display ---
@@ -212,13 +263,46 @@
         }
 
         // --- Handle the click event ---
-        clickButton.addEventListener('click', () => {
+        clickButton.addEventListener('click', (event) => {
             // 1. Increment the score
             score += bitcoinsPerClick;
             
             // 2. Update the visual display
             updateScoreDisplay();
+
+            // 3. Handle click count for the animation
+            totalClicks++;
+            if (totalClicks > 1000) {
+                const h1 = document.querySelector('h1');
+                h1.classList.add('h1-animated');
+
+                // Remove the class after the animation finishes so it can
+                // potentially be triggered again in the future.
+                h1.addEventListener('animationend', () => {
+                    h1.classList.remove('h1-animated');
+                }, { once: true }); // {once: true} automatically removes the listener
+            }
         });
+
+        // --- Handle Mute Button Click ---
+        muteButton.addEventListener('click', () => {
+            isMuted = !isMuted; // Toggle the mute state
+            applyMuteState();
+            saveGame(); // Save the new preference
+        });
+
+        function applyMuteState() {
+            music.muted = isMuted;
+            muteButton.textContent = isMuted ? '🔇' : '🔊';
+        }
+
+        // A one-time event listener to start music on the first user interaction
+        document.body.addEventListener('click', () => {
+            if (music.paused) {
+                music.play().catch(e => console.error("Audio play failed:", e));
+            }
+        }, { once: true });
+
 
         // --- Load the game when the page starts ---
         // We wrap this in 'DOMContentLoaded' to make sure all HTML is loaded
