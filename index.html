@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Clicker</title>
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+        }
+
+        #game-container {
+            text-align: center;
+            background-color: #ffffff;
+            padding: 2rem 3rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #f7931a;
+            margin-bottom: 0.5rem;
+        }
+
+        p {
+            font-size: 1.5rem;
+            margin-top: 0;
+            margin-bottom: 2rem;
+        }
+
+        /* This styles the score display */
+        #score-display {
+            font-weight: bold;
+            font-size: 3rem;
+            color: #000;
+        }
+
+        /* This styles the main click button */
+        #click-button {
+            background-color: #f7931a;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.25rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s ease, background-color 0.2s;
+            user-select: none; /* Prevents text selection on rapid clicks */
+        }
+        
+        /* This makes the button "pop" when clicked */
+        #click-button:active {
+            transform: scale(0.95);
+            background-color: #e68917;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <h1>Bitcoin Clicker</h1>
+        <p>Your Bitcoins: <span id="score-display">0</span></p>
+        <button id="click-button">Mine Bitcoin!</button>
+    </div>
+
+    <script>
+        // Get references to our HTML elements
+        const scoreDisplay = document.getElementById('score-display');
+        const clickButton = document.getElementById('click-button');
+
+        // Initialize score
+        let score = 0;
+
+        // --- Load the score from localStorage ---
+        // We use localStorage to save the score so it persists after closing the browser
+        function loadGame() {
+            // Get the saved score from localStorage. It's stored as a string.
+            const savedScore = localStorage.getItem('bitcoinScore');
+
+            // Check if a saved score exists
+            if (savedScore !== null) {
+                // Convert the saved score (string) back to a number
+                score = parseInt(savedScore, 10);
+            }
+            
+            // Update the display with the loaded score
+            updateScoreDisplay();
+        }
+
+        // --- Save the score to localStorage ---
+        function saveGame() {
+            // localStorage can only store strings, so we pass the number 'score'
+            localStorage.setItem('bitcoinScore', score);
+        }
+
+        // --- Update the score display ---
+        function updateScoreDisplay() {
+            scoreDisplay.textContent = score;
+        }
+
+        // --- Handle the click event ---
+        clickButton.addEventListener('click', () => {
+            // 1. Increment the score
+            score = score + 1;
+            
+            // 2. Update the visual display
+            updateScoreDisplay();
+            
+            // 3. Save the new score to localStorage
+            saveGame();
+        });
+
+        // --- Load the game when the page starts ---
+        // We wrap this in 'DOMContentLoaded' to make sure all HTML is loaded
+        // before the script runs.
+        document.addEventListener('DOMContentLoaded', () => {
+            loadGame();
+        });
+    </script>
+
+</body>
+</html>
