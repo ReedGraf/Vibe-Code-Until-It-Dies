@@ -43,4 +43,4 @@ Good luck. You'll need it.
 
 ---
 
-This Readme was made using AI as well minus this sentence.
+This Readme was made using AI as well minus this section. My goal is to prove how dumb "vibe coding" really is by creating the most pointless projects until the LLM is unable to do anything without encountering an error.
