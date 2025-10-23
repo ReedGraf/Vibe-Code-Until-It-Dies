@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minesweeper - Surrounded!</title>
+    <!-- Use the Inter font --><link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --grid-size: 10;
+            --cell-size: 30px;
+            --bg-color: #1a1a1a;
+            --grid-bg: #2b2b2b;
+            --cell-hidden: #444;
+            --cell-hidden-hover: #555;
+            --cell-revealed: #333;
+            --font-color: #eee;
+            --border-color: #555;
+            
+            /* Colors for numbers */
+            --color-1: #4a90e2; /* Blue */
+            --color-2: #50e3c2; /* Teal */
+            --color-3: #e35050; /* Red */
+            --color-4: #904ae2; /* Purple */
+            --color-5: #e2904a; /* Orange */
+            --color-6: #4ae290; /* Green */
+            --color-7: #e24a90; /* Pink */
+            --color-8: #b9b9b9; /* Gray */
+        }
+
+        @media (max-width: 400px) {
+            :root {
+                /* Make cells slightly larger on small screens */
+                --cell-size: 32px;
+            }
+        }
+        @media (min-width: 600px) {
+            :root {
+                --cell-size: 35px;
+            }
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--font-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        h1 {
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        p {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: #aaa;
+            text-align: center;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: calc(var(--grid-size) * var(--cell-size));
+            max-width: 100%;
+            margin-bottom: 1rem;
+            padding: 0.5rem 1rem;
+            background-color: var(--grid-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            box-sizing: border-box;
+        }
+
+        .info-item {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        #reset-button {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            background-color: #4a90e2;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        #reset-button:hover {
+            background-color: #5aa1f2;
+        }
+
+        #reset-button:active {
+            transform: scale(0.98);
+        }
+
+        #grid-container {
+            display: grid;
+            grid-template-columns: repeat(var(--grid-size), var(--cell-size));
+            grid-template-rows: repeat(var(--grid-size), var(--cell-size));
+            background-color: var(--grid-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 5px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            background-color: var(--cell-hidden);
+            border: 1px solid var(--border-color);
+            box-sizing: border-box; /* Ensures padding/border are inside */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(var(--cell-size) * 0.6);
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+        }
+
+        .cell:not(.revealed):hover {
+            background-color: var(--cell-hidden-hover);
+        }
+
+        .cell.revealed {
+            background-color: var(--cell-revealed);
+            border-color: #444;
+            cursor: default;
+        }
+
+        .cell.flagged {
+            font-size: calc(var(--cell-size) * 0.5);
+        }
+        
+        .cell.bomb {
+            background-color: #e35050;
+            font-size: calc(var(--cell-size) * 0.6);
+        }
+
+        /* Number colors */
+        .cell.c1 { color: var(--color-1); }
+        .cell.c2 { color: var(--color-2); }
+        .cell.c3 { color: var(--color-3); }
+        .cell.c4 { color: var(--color-4); }
+        .cell.c5 { color: var(--color-5); }
+        .cell.c6 { color: var(--color-6); }
+        .cell.c7 { color: var(--color-7); }
+        .cell.c8 { color: var(--color-8); }
+
+        #message-overlay {
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        #message-box {
+            background-color: var(--grid-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        #message-text {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Minesweeper - Surrounded!</h1>
+    <p>Your first click reveals a safe spot. One other spot is also safe. All others are bombs.</p>
+
+    <div class="game-info">
+        <div class="info-item">💣 <span id="bomb-count">--</span></div>
+        <div class="info-item">⏰ <span id="timer">0</span></div>
+        <button id="reset-button">Reset</button>
+    </div>
+
+    <div id="grid-container"></div>
+
+    <div id="message-overlay">
+        <div id="message-box">
+            <div id="message-text">You Win!</div>
+            <button id="close-modal-button">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Constants and State ---
+            const GRID_SIZE = 10;
+            let BOMB_COUNT = 20; // This will be dynamically updated
+            const FLAG_ICON = '🚩';
+            const BOMB_ICON = '💣';
+
+            let board = []; // 2D array of cell objects
+            let firstClick = true;
+            let gameOver = false;
+            let bombsRemaining = BOMB_COUNT;
+            let timerId = null;
+            let seconds = 0;
+
+            // --- DOM Elements ---
+            const grid = document.getElementById('grid-container');
+            const bombCountEl = document.getElementById('bomb-count');
+            const timerEl = document.getElementById('timer');
+            const resetButton = document.getElementById('reset-button');
+            const closeModalButton = document.getElementById('close-modal-button');
+            const messageOverlay = document.getElementById('message-overlay');
+            const messageText = document.getElementById('message-text');
+
+            // --- Game Initialization ---
+            function initGame() {
+                // Reset state
+                firstClick = true;
+                gameOver = false;
+                bombsRemaining = (GRID_SIZE * GRID_SIZE) - 2; // Default for 2 empty cells
+                BOMB_COUNT = bombsRemaining; // Sync actual bomb count
+                seconds = 0;
+                board = [];
+
+                // Clear timer
+                if (timerId) {
+                    clearInterval(timerId);
+                    timerId = null;
+                }
+
+                // Reset UI
+                grid.innerHTML = '';
+                grid.style.setProperty('--grid-size', GRID_SIZE);
+                bombCountEl.textContent = BOMB_COUNT;
+                timerEl.textContent = 0;
+                messageOverlay.style.display = 'none';
+
+                // Create board data structure and DOM elements
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    const row = [];
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        // Create cell object
+                        const cell = {
+                            row: r,
+                            col: c,
+                            isBomb: false,
+                            isRevealed: false,
+                            isFlagged: false,
+                            adjacentBombs: 0,
+                            el: createCellElement(r, c)
+                        };
+                        row.push(cell);
+                        grid.appendChild(cell.el);
+                    }
+                    board.push(row);
+                }
+            }
+
+            // --- Create Cell Element ---
+            function createCellElement(row, col) {
+                const cellEl = document.createElement('div');
+                cellEl.classList.add('cell');
+                cellEl.dataset.row = row;
+                cellEl.dataset.col = col;
+
+                // Left click
+                cellEl.addEventListener('click', () => handleCellClick(row, col));
+                // Right click
+                cellEl.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    handleRightClick(row, col);
+                });
+
+                return cellEl;
+            }
+
+            // --- Game Logic ---
+
+            function handleCellClick(row, col) {
+                if (gameOver) return;
+
+                const cell = board[row][col];
+                if (cell.isFlagged || cell.isRevealed) return;
+
+                if (firstClick) {
+                    firstClick = false;
+                    placeBombs(row, col);
+                    
+                    // Update bomb count based on 2 safe spots
+                    BOMB_COUNT = (GRID_SIZE * GRID_SIZE) - 2;
+                    bombsRemaining = BOMB_COUNT;
+                    bombCountEl.textContent = bombsRemaining;
+
+                    calculateAllAdjacentBombs();
+                    startTimer();
+                }
+
+                revealCell(cell);
+            }
+
+            function handleRightClick(row, col) {
+                if (gameOver) return;
+                const cell = board[row][col];
+                if (cell.isRevealed) return;
+
+                cell.isFlagged = !cell.isFlagged;
+
+                if (cell.isFlagged) {
+                    cell.el.textContent = FLAG_ICON;
+                    cell.el.classList.add('flagged');
+                    bombsRemaining--;
+                } else {
+                    cell.el.textContent = '';
+                    cell.el.classList.remove('flagged');
+                    bombsRemaining++;
+                }
+                bombCountEl.textContent = bombsRemaining;
+            }
+
+            /**
+             * Places bombs so that:
+             * 1. The first clicked cell is safe.
+             * 2. One *other* random cell is safe.
+             * 3. All other cells are bombs.
+             */
+            function placeBombs(firstRow, firstCol) {
+                const safeCells = new Set();
+                safeCells.add(`${firstRow},${firstCol}`);
+
+                // Find a second random safe cell
+                let secondSafeCellFound = false;
+                while (!secondSafeCellFound) {
+                    const randomRow = Math.floor(Math.random() * GRID_SIZE);
+                    const randomCol = Math.floor(Math.random() * GRID_SIZE);
+                    const key = `${randomRow},${randomCol}`;
+
+                    // Ensure the second safe cell is not the first one
+                    if (!safeCells.has(key)) {
+                        safeCells.add(key);
+                        secondSafeCellFound = true;
+                    }
+                }
+
+                // Now populate the board based on the two safe cells
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        if (safeCells.has(`${r},${c}`)) {
+                            board[r][c].isBomb = false;
+                        } else {
+                            board[r][c].isBomb = true;
+                        }
+                    }
+                }
+            }
+
+            function calculateAllAdjacentBombs() {
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        if (board[r][c].isBomb) continue;
+                        
+                        const neighbors = getNeighbors(r, c);
+                        let bombCount = 0;
+                        for (const [nr, nc] of neighbors) {
+                            if (board[nr][nc].isBomb) {
+                                bombCount++;
+                            }
+                        }
+                        board[r][c].adjacentBombs = bombCount;
+                    }
+                }
+            }
+            
+            function revealCell(cell) {
+                if (cell.isRevealed || cell.isFlagged || gameOver) return;
+
+                cell.isRevealed = true;
+                cell.el.classList.add('revealed');
+
+                if (cell.isBomb) {
+                    cell.el.textContent = BOMB_ICON;
+                    cell.el.classList.add('bomb');
+                    endGame(false); // You lost
+                    return;
+                }
+
+                if (cell.adjacentBombs > 0) {
+                    cell.el.textContent = cell.adjacentBombs;
+                    cell.el.classList.add(`c${cell.adjacentBombs}`);
+                } else {
+                    // This will only happen if the *second* safe cell is revealed
+                    // and it happens to have no bombs around it (unlikely with so many bombs)
+                    // or if the first cell itself had no bombs (impossible for the first version of this game)
+                    const neighbors = getNeighbors(cell.row, cell.col);
+                    for (const [nr, nc] of neighbors) {
+                        revealCell(board[nr][nc]);
+                    }
+                }
+                
+                checkWinCondition();
+            }
+
+            function endGame(isWin) {
+                gameOver = true;
+                clearInterval(timerId);
+                timerId = null;
+
+                // Show all bombs
+                if (!isWin) {
+                    for (let r = 0; r < GRID_SIZE; r++) {
+                        for (let c = 0; c < GRID_SIZE; c++) {
+                            const cell = board[r][c];
+                            if (cell.isBomb && !cell.isRevealed) {
+                                cell.el.textContent = BOMB_ICON;
+                                cell.el.classList.add('bomb');
+                                if(cell.isFlagged) cell.el.style.opacity = '0.7';
+                            }
+                        }
+                    }
+                }
+
+                // Show message
+                messageText.textContent = isWin ? 'You Win! 🎉' : 'Game Over 💥';
+                // Update button text based on win/loss
+                if (isWin) {
+                    closeModalButton.textContent = 'Play Again';
+                } else {
+                    closeModalButton.textContent = 'View Board';
+                }
+                messageOverlay.style.display = 'flex';
+            }
+            
+            function checkWinCondition() {
+                let revealedNonBombs = 0;
+                let totalNonBombs = 2; // Only 2 non-bomb cells
+                
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        if (board[r][c].isRevealed && !board[r][c].isBomb) {
+                            revealedNonBombs++;
+                        }
+                    }
+                }
+                
+                if (revealedNonBombs === totalNonBombs) {
+                    endGame(true); // You win
+                }
+            }
+
+            // --- Timer ---
+            function startTimer() {
+                if (timerId) return; // Already running
+                timerId = setInterval(() => {
+                    seconds++;
+                    timerEl.textContent = seconds;
+                }, 1000);
+            }
+
+            // --- Utility ---
+            function getNeighbors(row, col) {
+                const neighbors = [];
+                for (let rOff = -1; rOff <= 1; rOff++) {
+                    for (let cOff = -1; cOff <= 1; cOff++) {
+                        if (rOff === 0 && cOff === 0) continue;
+                        const nr = row + rOff;
+                        const nc = col + cOff;
+                        // Check if neighbor is within bounds
+                        if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
+                            neighbors.push([nr, nc]);
+                        }
+                    }
+                }
+                return neighbors;
+            }
+
+            // --- Event Listeners ---
+            resetButton.addEventListener('click', initGame);
+            closeModalButton.addEventListener('click', () => {
+                // If the game was won, "Play Again" restarts the game
+                if (closeModalButton.textContent === 'Play Again') {
+                    initGame();
+                } else {
+                    // If the game was lost, "View Board" just hides the modal
+                    messageOverlay.style.display = 'none';
+                }
+            });
+
+            // --- Start Game ---
+            initGame();
+        });
+    </script>
+</body>
+</html>
+
+
