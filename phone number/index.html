@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phone Number Input</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: grid;
+            place-items: center;
+            min-height: 90vh;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        form {
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            width: 350px;
+        }
+        h2 {
+            text-align: center;
+            margin-top: 0;
+        }
+        div {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            box-sizing: border-box; /* Ensures padding doesn't affect width */
+        }
+        input[type="range"] {
+            width: 100%;
+            margin-top: 5px;
+        }
+        output {
+            display: block;
+            text-align: center;
+            font-size: 1.5em; /* Larger font for the number */
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            margin-top: 10px;
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            color: #495057;
+            letter-spacing: 2px; /* Adds spacing between numbers */
+        }
+        .note {
+            font-size: 0.8em;
+            color: #6c757d;
+            text-align: center;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <form oninput="phone.value = slider.value">
+        <h2>Enter Your Phone Number</h2>
+        
+        <div>
+            <label for="country-code">Country Code:</label>
+            <select id="country-code" name="country-code">
+                <option value="+1">+1 (USA / Canada)</option>
+                <option value="+44">+44 (United Kingdom)</option>
+                <option value="+91">+91 (India)</option>
+                <option value="+61">+61 (Australia)</option>
+                <option value="+81">+81 (Japan)</option>
+                <option value="+49">+49 (Germany)</option>
+                <option value="+52">+52 (Mexico)</option>
+            </select>
+        </div>
+        
+        <div>
+            <label for="slider">Phone Number:</label>
+            
+            <input type="range" id="slider" name="slider" 
+                   min="1000000000" 
+                   max="9999999999" 
+                   value="5551234567">
+                   
+            <output name="phone" for="slider">5551234567</output>
+        </div>
+    </form>
+
+</body>
+</html>
