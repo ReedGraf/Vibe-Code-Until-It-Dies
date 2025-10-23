@@ -251,14 +251,13 @@
             let audioEnabled = false;
 
             // --- Synths for Sounds ---
-            // Using different synths for variety
-            // const popSynth = new Tone.MembraneSynth().toDestination(); // Old synth
-            const popSynth = new Tone.FMSynth({ // NEW: More "poppy" synth
-                harmonicity: 8,
-                modulationIndex: 10,
+            // Reconfigured FMSynth to sound like a mouth pop
+            const popSynth = new Tone.FMSynth({
+                harmonicity: 2,
+                modulationIndex: 10, // Increased for a sharper attack
                 oscillator: { type: 'sine' },
-                envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 },
-                modulationEnvelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.1 }
+                envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.05 }, // Much shorter decay for a "pop"
+                modulationEnvelope: { attack: 0.001, decay: 0.01, sustain: 0, release: 0.05 } // Even sharper transient
             }).toDestination();
             popSynth.volume.value = -10;
             
@@ -302,21 +301,21 @@
             // NEW: Synth for whoosh sound
             const whooshSynth = new Tone.NoiseSynth({
                 noise: {
-                    type: 'pink', // Changed from 'white' to 'pink' for a fuller sound
+                    type: 'brown', // Changed from 'pink' to 'brown' for a deeper, less harsh sound
                 },
                 envelope: {
                     attack: 0.3, // NEW: Increased attack (was 0.001) for a slower fade-in
-                    decay: 1.2, // Increased decay from 0.5 to 1.2 for a longer tail
+                    decay: 1.0, // Shortened decay slightly
                     sustain: 0
                 },
                 filterEnvelope: {
                     attack: 0.3, // NEW: Increased attack (was 0.001)
                     decay: 0.8, // Increased filter decay from 0.3 to 0.8
                     sustain: 0,
-                    baseFrequency: 5000, // Start high
+                    baseFrequency: 2500, // Lowered starting frequency
                     octaves: -4 // Deeper sweep
                 },
-                volume: -10 // Increased volume slightly
+                volume: -18 // Lowered volume significantly
             }).toDestination();
 
 
@@ -339,7 +338,7 @@
                 count++;
                 clickCount.textContent = count;
                 if (audioEnabled) {
-                    clickSynth.triggerAttackRelease('C5', '16n');
+                    sliderSynth.triggerAttackRelease('C5', '32n');
                 }
             });
 
@@ -349,7 +348,7 @@
                 toggle.addEventListener('change', () => {
                     if (audioEnabled) {
                         const note = toggle.checked ? ['C5', 'E5', 'G5'][index] : ['C4', 'E4', 'G4'][index];
-                        toggleSynth.triggerAttackRelease(note, '32n');
+                        sliderSynth.triggerAttackRelease(note, '32n');
                     }
                 });
             });
@@ -472,13 +471,22 @@
             const keypadDisplay = document.getElementById('keypad-display');
             const keypadButtons = document.querySelectorAll('.keypad-btn');
             const keypadClear = document.getElementById('keypad-clear');
+            const keypadNotes = {
+                '1': 'C4', '2': 'D4', '3': 'E4',
+                '4': 'F4', '5': 'G4', '6': 'A4',
+                '7': 'B4', '8': 'C5', '9': 'D5',
+                '0': 'E5', '#': 'F#5'
+            };
             
             keypadButtons.forEach(button => {
                 button.addEventListener('click', () => {
-                    keypadDisplay.textContent += button.textContent;
+                    const key = button.textContent;
+                    keypadDisplay.textContent += key;
                     if (audioEnabled) {
-                        const note = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'A3'][Math.floor(Math.random() * 11)];
-                        keySynth.triggerAttackRelease(note, '16n');
+                        const note = keypadNotes[key];
+                        if (note) {
+                            keySynth.triggerAttackRelease(note, '16n');
+                        }
                     }
                 });
             });
@@ -511,8 +519,9 @@
                     bubble.classList.remove('bg-blue-500', 'hover:bg-blue-400');
                     bubble.classList.add('bg-gray-600', 'popped');
                     if (audioEnabled) {
-                        // popSynth.triggerAttackRelease('C2', '8n'); // Old sound
-                        popSynth.triggerAttackRelease('C5', '16n'); // NEW: Higher, shorter "pop"
+                        const baseFreq = Tone.Frequency('G5').toFrequency();
+                        const randomFreq = 500 + (Math.random() - 0.5) * 200; // Higher, more varied pitch for a mouth pop
+                        popSynth.triggerAttackRelease(randomFreq, '64n'); // Shortened duration for a sharper pop
                     }
                 }
             }
@@ -520,7 +529,7 @@
             bubbleReset.addEventListener('click', () => {
                 createBubbles();
                 if (audioEnabled) {
-                    toggleSynth.triggerAttackRelease('G5', '16n');
+                    sliderSynth.triggerAttackRelease('C5', '32n');
                 }
             });
             createBubbles(); // Initial creation
