@@ -1,4 +1,4 @@
-# vibeCodeToDeath Repository
+# Vibe-Code-Until-It-Dies
 
 Welcome to the digital equivalent of a house of cards built during a mild earthquake. This repository is a testament to "vibe-driven development"—a process where code is written based on pure instinct, a disregard for best practices, and an unhealthy amount of caffeine.
 
@@ -10,7 +10,7 @@ Welcome to the digital equivalent of a house of cards built during a mild earthq
 
 This collection contains a couple of web-based games that were coded with more hope than skill.
 
-### 1. Minesweeper - Surrounded!
+### 1. Minesweeper
 
 -   **File:** `minesweeper/index.html`
 -   **The Vibe:** A sleek, modern, dark-mode take on Minesweeper for people who enjoy anxiety.
