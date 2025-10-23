@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fidget Page</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Tone.js for sound effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    
+    <style>
+        /* Custom styles for specific widgets */
+        
+        /* Vertical Slider */
+        input[type="range"].vertical-slider {
+            -webkit-appearance: slider-vertical; /* WebKit */
+            writing-mode: bt-lr; /* IE */
+            width: 8px;
+            height: 150px;
+            padding: 0 5px;
+        }
+
+        /* Knob */
+        .knob-pointer {
+            width: 8px;
+            height: 50%;
+            background-color: #f3f4f6; /* gray-100 */
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform: translateX(-50%);
+            transform-origin: bottom center;
+            border-radius: 4px 4px 0 0;
+            pointer-events: none; /* So it doesn't interfere with mouse events */
+        }
+        
+        /* Spinning Wheel */
+        .spinner {
+            width: 100px;
+            height: 100px;
+            border: 8px solid #4b5563; /* gray-600 */
+            border-top-color: #3b82f6; /* blue-500 */
+            border-radius: 50%;
+            transition: transform 0.5s ease-out;
+        }
+        .is-spinning {
+            animation: spin 1s linear infinite;
+        }
+        .manual-spin {
+            transition: transform 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Bubble Wrap */
+        .bubble {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.1s ease;
+        }
+        .bubble.popped {
+            transform: scale(0.9);
+            opacity: 0.5;
+        }
+
+        /* Prevent text selection when dragging */
+        .no-select {
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10+ */
+            user-select: none; /* Standard */
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 font-sans h-full overflow-auto no-select">
+
+    <!-- Audio Start Modal -->
+    <div id="audio-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <button id="start-audio" class="px-8 py-4 bg-blue-600 text-white text-2xl font-bold rounded-lg shadow-xl hover:bg-blue-700 transition-colors">
+            Click to Enable Sound
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto p-4 md:p-8">
+        <h1 class="text-4xl font-bold text-center mb-8 text-white">Fidget Page</h1>
+
+        <!-- Grid for Fidget Toys -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+
+            <!-- 1. Click Counter -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col items-center justify-center gap-4">
+                <h2 class="text-xl font-semibold">Click Counter</h2>
+                <div id="click-count" class="text-5xl font-bold text-cyan-400">0</div>
+                <button id="click-button" class="w-full px-4 py-3 bg-cyan-600 text-white font-bold rounded-lg shadow-md hover:bg-cyan-700 active:bg-cyan-800 active:scale-95 transition-all">
+                    Click Me!
+                </button>
+            </div>
+
+            <!-- 2. Toggle Switches -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col items-center justify-center gap-4">
+                <h2 class="text-xl font-semibold">Switches</h2>
+                <div class="flex space-x-6">
+                    <!-- Toggle 1 -->
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" value="" class="sr-only peer" id="toggle-1">
+                        <div class="w-14 h-8 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500"></div>
+                    </label>
+                    <!-- Toggle 2 -->
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" value="" class="sr-only peer" id="toggle-2">
+                        <div class="w-14 h-8 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-500"></div>
+                    </label>
+                    <!-- Toggle 3 -->
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" value="" class="sr-only peer" id="toggle-3">
+                        <div class="w-14 h-8 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-1 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-yellow-500"></div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 3. Color Mixer -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col items-center gap-4">
+                <h2 class="text-xl font-semibold">Color Mixer</h2>
+                <div id="color-box" class="w-full h-24 rounded-lg bg-black transition-colors duration-100 border-4 border-gray-700"></div>
+                <!-- Sliders -->
+                <div class="w-full space-y-2">
+                    <!-- Red -->
+                    <label for="slider-r" class="text-red-500 font-medium">Red</label>
+                    <input id="slider-r" type="range" min="0" max="255" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg accent-red-500">
+                    <!-- Green -->
+                    <label for="slider-g" class="text-green-500 font-medium">Green</label>
+                    <input id="slider-g" type="range" min="0" max="255" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg accent-green-500">
+                    <!-- Blue -->
+                    <label for="slider-b" class="text-blue-500 font-medium">Blue</label>
+                    <input id="slider-b" type="range" min="0" max="255" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg accent-blue-500">
+                </div>
+            </div>
+
+            <!-- 4. Rotary Knob -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col items-center justify-center gap-4 touch-none">
+                <div class="flex items-center justify-between w-full">
+                    <h2 class="text-xl font-semibold">Rotary Knob</h2>
+                    <select id="knob-snap" class="bg-gray-700 text-gray-200 text-sm rounded-md p-1 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="1">Smooth</option>
+                        <option value="15">15° Snap</option>
+                        <option value="30">30° Snap</option>
+                        <option value="45">45° Snap</option>
+                        <option value="90">90° Snap</option>
+                    </select>
+                </div>
+                <div id="knob-value" class="text-3xl font-bold text-yellow-400">0°</div>
+                <div id="knob" class="relative w-32 h-32 bg-gray-700 rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing border-4 border-gray-600 shadow-inner">
+                    <div class="knob-pointer"></div>
+                </div>
+            </div>
+            
+            <!-- 5. Spinners -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col items-center justify-center gap-4">
+                <h2 class="text-xl font-semibold">Spinning Wheels</h2>
+                <div class="flex items-center gap-6">
+                    <!-- Auto Spinner -->
+                    <div class="spinner is-spinning" title="This one spins on its own!"></div>
+                    <!-- Manual Spinner -->
+                    <div id="manual-spinner" class="spinner manual-spin" title="Click to spin me!"></div>
+                </div>
+            </div>
+
+            <!-- 6. Keypad -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col items-center gap-4">
+                <h2 class="text-xl font-semibold">Keypad</h2>
+                <div id="keypad-display" class="w-full h-12 bg-gray-900 rounded-md text-right px-4 py-2 text-2xl truncate border-2 border-gray-700"></div>
+                <div class="grid grid-cols-3 gap-2 w-full">
+                    <button class="keypad-btn h-12 bg-gray-700 rounded-lg text-xl font-bold hover:bg-gray-600 active:bg-gray-500 transition-all">1</button>
+                    <button class="keypad-btn h-12 bg-gray-700 rounded-lg text-xl font-bold hover:bg-gray-600 active:bg-gray-500 transition-all">2</button>
+                    <button class="keypad-btn h-12 bg-gray-700 rounded-lg text-xl font-bold hover:bg-gray-600 active:bg-gray-500 transition-all">3</button>
+                    <button class="keypad-btn h-12 bg-gray-700 rounded-lg text-xl font-bold hover:bg-gray-600 active:bg-gray-500 transition-all">4</button>
+                    <button class="keypad-btn h-12 bg-gray-700 rounded-lg text-xl font-bold hover:bg-gray-600 active:bg-gray-500 transition-all">5</button>
+                    <button class="keypad-btn h-12 bg-gray-700 rounded-lg text-xl font-bold hover:bg-gray-600 active:bg-gray-500 transition-all">6</button>
+                    <button class="keypad-btn h-12 bg-gray-700 rounded-lg text-xl font-bold hover:bg-gray-600 active:bg-gray-500 transition-all">7</button>
+                    <button class="keypad-btn h-12 bg-gray-700 rounded-lg text-xl font-bold hover:bg-gray-600 active:bg-gray-500 transition-all">8</button>
+                    <button class="keypad-btn h-12 bg-gray-700 rounded-lg text-xl font-bold hover:bg-gray-600 active:bg-gray-500 transition-all">9</button>
+                    <button id="keypad-clear" class="h-12 bg-red-700 rounded-lg text-xl font-bold hover:bg-red-600 active:bg-red-500 transition-all">C</button>
+                    <button class="keypad-btn h-12 bg-gray-700 rounded-lg text-xl font-bold hover:bg-gray-600 active:bg-gray-500 transition-all">0</button>
+                    <button class="keypad-btn h-12 bg-gray-700 rounded-lg text-xl font-bold hover:bg-gray-600 active:bg-gray-500 transition-all">#</button>
+                </div>
+            </div>
+            
+            <!-- 7. Bubble Wrap -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col items-center gap-4 col-span-1 sm:col-span-2">
+                <div class="flex justify-between w-full items-center">
+                    <h2 class="text-xl font-semibold">Bubble Wrap</h2>
+                    <button id="bubble-reset" class="px-3 py-1 bg-blue-600 text-white text-sm font-bold rounded-md hover:bg-blue-700 active:bg-blue-800 transition-all">Reset</button>
+                </div>
+                <div id="bubble-wrap" class="grid grid-cols-8 gap-2">
+                    <!-- Bubbles will be generated by JS -->
+                </div>
+            </div>
+
+            <!-- 8. Sliders (Vertical & Horizontal) -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col items-center gap-4">
+                <h2 class="text-xl font-semibold">More Sliders</h2>
+                <div class="flex justify-around w-full h-full items-center">
+                    <!-- Vertical Slider -->
+                    <div class="flex flex-col items-center gap-2">
+                        <input id="vertical-slider" type="range" min="0" max="100" value="50" class="vertical-slider accent-purple-500">
+                        <span id="vertical-slider-value" class="text-lg font-bold">50</span>
+                    </div>
+                    <!-- Horizontal Slider -->
+                    <div class="flex flex-col items-center gap-2 w-3/4">
+                        <input id="horizontal-slider" type="range" min="0" max="100" value="25" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg accent-orange-500">
+                        <span id="horizontal-slider-value" class="text-lg font-bold">25</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 9. Random Color Clicker -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col items-center justify-center gap-4">
+                <h2 class="text-xl font-semibold">Color Clicker</h2>
+                <div id="random-color-box" class="w-full h-32 rounded-lg cursor-pointer transition-colors duration-200" style="background-color: #3b82f6;"></div>
+                <p class="text-sm text-gray-400">Click the box to change its color!</p>
+            </div>
+            
+            <!-- 10. Do Not Press -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col items-center justify-center gap-4">
+                <h2 class="text-xl font-semibold">The Button</h2>
+                <button id="dnp-button" class="px-6 py-3 bg-red-600 text-white text-lg font-bold rounded-lg shadow-lg hover:bg-red-700 active:bg-red-800 active:scale-95 transition-all">
+                    DO NOT PRESS
+                </button>
+                <div id="dnp-message" class="h-10 text-center text-lg text-yellow-400 font-medium"></div>
+            </div>
+            
+            <!-- 11. Typing Zone -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg flex flex-col gap-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-semibold">Typing Zone</h2>
+                    <span id="char-count" class="text-sm text-gray-400">0 characters</span>
+                </div>
+                <textarea id="typing-area" class="w-full h-32 bg-gray-700 rounded-lg p-3 text-gray-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Type something..."></textarea>
+            </div>
+
+
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            let audioEnabled = false;
+
+            // --- Synths for Sounds ---
+            // Using different synths for variety
+            // const popSynth = new Tone.MembraneSynth().toDestination(); // Old synth
+            const popSynth = new Tone.FMSynth({ // NEW: More "poppy" synth
+                harmonicity: 8,
+                modulationIndex: 10,
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 0.1 },
+                modulationEnvelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.1 }
+            }).toDestination();
+            popSynth.volume.value = -10;
+            
+            const clickSynth = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 }
+            }).toDestination();
+            clickSynth.volume.value = -10;
+
+            const toggleSynth = new Tone.Synth({
+                oscillator: { type: 'square' },
+                envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.1 }
+            }).toDestination();
+            toggleSynth.volume.value = -15;
+
+            const keySynth = new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.2 }
+            }).toDestination();
+            keySynth.volume.value = -8;
+
+            // NEW: Synths for new sounds
+            const sliderSynth = new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.001, decay: 0.02, sustain: 0, release: 0.05 },
+                volume: -22
+            }).toDestination();
+
+            const knobTickSynth = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.001, decay: 0.01, sustain: 0, release: 0.01 },
+                volume: -18
+            }).toDestination();
+
+            const typeSynth = new Tone.Synth({
+                oscillator: { type: 'square' },
+                envelope: { attack: 0.001, decay: 0.01, sustain: 0, release: 0.05 },
+                volume: -25
+            }).toDestination();
+
+            // NEW: Synth for whoosh sound
+            const whooshSynth = new Tone.NoiseSynth({
+                noise: {
+                    type: 'pink', // Changed from 'white' to 'pink' for a fuller sound
+                },
+                envelope: {
+                    attack: 0.3, // NEW: Increased attack (was 0.001) for a slower fade-in
+                    decay: 1.2, // Increased decay from 0.5 to 1.2 for a longer tail
+                    sustain: 0
+                },
+                filterEnvelope: {
+                    attack: 0.3, // NEW: Increased attack (was 0.001)
+                    decay: 0.8, // Increased filter decay from 0.3 to 0.8
+                    sustain: 0,
+                    baseFrequency: 5000, // Start high
+                    octaves: -4 // Deeper sweep
+                },
+                volume: -10 // Increased volume slightly
+            }).toDestination();
+
+
+            // --- 0. Audio Enable ---
+            const audioModal = document.getElementById('audio-modal');
+            const startAudioBtn = document.getElementById('start-audio');
+
+            startAudioBtn.addEventListener('click', async () => {
+                await Tone.start();
+                audioEnabled = true;
+                audioModal.style.display = 'none';
+                console.log('Audio context started');
+            });
+
+            // --- 1. Click Counter ---
+            const clickButton = document.getElementById('click-button');
+            const clickCount = document.getElementById('click-count');
+            let count = 0;
+            clickButton.addEventListener('click', () => {
+                count++;
+                clickCount.textContent = count;
+                if (audioEnabled) {
+                    clickSynth.triggerAttackRelease('C5', '16n');
+                }
+            });
+
+            // --- 2. Toggle Switches ---
+            const toggles = [document.getElementById('toggle-1'), document.getElementById('toggle-2'), document.getElementById('toggle-3')];
+            toggles.forEach((toggle, index) => {
+                toggle.addEventListener('change', () => {
+                    if (audioEnabled) {
+                        const note = toggle.checked ? ['C5', 'E5', 'G5'][index] : ['C4', 'E4', 'G4'][index];
+                        toggleSynth.triggerAttackRelease(note, '32n');
+                    }
+                });
+            });
+
+            // --- 3. Color Mixer ---
+            const sliderR = document.getElementById('slider-r');
+            const sliderG = document.getElementById('slider-g');
+            const sliderB = document.getElementById('slider-b');
+            const colorBox = document.getElementById('color-box');
+            
+            function updateColor() {
+                const r = sliderR.value;
+                const g = sliderG.value;
+                const b = sliderB.value;
+                colorBox.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+            }
+            sliderR.addEventListener('input', updateColor);
+            sliderG.addEventListener('input', updateColor);
+            sliderB.addEventListener('input', updateColor);
+            
+            // NEW: Sounds for color sliders
+            sliderR.addEventListener('input', () => { 
+                if (audioEnabled) sliderSynth.triggerAttackRelease(261.63 + (sliderR.value / 255) * 100, '32n'); 
+            });
+            sliderG.addEventListener('input', () => { 
+                if (audioEnabled) sliderSynth.triggerAttackRelease(329.63 + (sliderG.value / 255) * 100, '32n'); 
+            });
+            sliderB.addEventListener('input', () => { 
+                if (audioEnabled) sliderSynth.triggerAttackRelease(392.00 + (sliderB.value / 255) * 100, '32n'); 
+            });
+
+            updateColor(); // Initial call
+
+            // --- 4. Rotary Knob ---
+            const knob = document.getElementById('knob');
+            const knobValue = document.getElementById('knob-value');
+            const knobSnap = document.getElementById('knob-snap'); // Get the new dropdown
+            let isDragging = false;
+            let currentAngle = 0;
+
+            function getKnobCenter(element) {
+                const rect = element.getBoundingClientRect();
+                return {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                };
+            }
+
+            function updateKnobAngle(e) {
+                if (!isDragging) return;
+                
+                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+                if (clientX === undefined) return;
+
+                const center = getKnobCenter(knob);
+                const dx = clientX - center.x;
+                const dy = clientY - center.y;
+                let angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90; // +90 to make 0 at top
+                if (angle < 0) {
+                    angle += 360;
+                }
+                
+                // NEW: Get snap value and apply it
+                const snapIncrement = parseInt(knobSnap.value, 10);
+                let newAngle;
+                if (snapIncrement > 1) {
+                    newAngle = Math.round(angle / snapIncrement) * snapIncrement;
+                    if (newAngle === 360) newAngle = 0; // Handle looping back to 0
+                } else {
+                    newAngle = Math.round(angle);
+                }
+                
+                // Play sound only on angle change
+                if (newAngle !== currentAngle && audioEnabled) {
+                    const freq = 400 + (newAngle / 360) * 400; // Pitch rises as knob turns
+                    knobTickSynth.triggerAttackRelease(freq, '64n');
+                }
+
+                currentAngle = newAngle;
+                knob.style.transform = `rotate(${currentAngle}deg)`;
+                knobValue.textContent = `${currentAngle}°`;
+            }
+
+            knob.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                knob.classList.add('cursor-grabbing');
+                e.preventDefault();
+            });
+            knob.addEventListener('touchstart', (e) => {
+                isDragging = true;
+                e.preventDefault();
+            }, { passive: false });
+
+            document.addEventListener('mousemove', updateKnobAngle);
+            document.addEventListener('touchmove', updateKnobAngle, { passive: false });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                knob.classList.remove('cursor-grabbing');
+            });
+            document.addEventListener('touchend', () => {
+                isDragging = false;
+            });
+
+            // --- 5. Manual Spinner ---
+            const manualSpinner = document.getElementById('manual-spinner');
+            let manualSpinAngle = 0;
+            manualSpinner.addEventListener('click', () => {
+                manualSpinAngle += 360 + Math.floor(Math.random() * 360); // Spin at least 1 full turn + random
+                manualSpinner.style.transform = `rotate(${manualSpinAngle}deg)`;
+                if (audioEnabled) {
+                    // clickSynth.triggerAttackRelease('A4', '8n', Tone.now());
+                    // clickSynth.triggerAttackRelease('E5', '8n', Tone.now() + 0.1);
+                    whooshSynth.triggerAttackRelease('1.0'); // Use the new, longer duration
+                }
+            });
+
+            // --- 6. Keypad ---
+            const keypadDisplay = document.getElementById('keypad-display');
+            const keypadButtons = document.querySelectorAll('.keypad-btn');
+            const keypadClear = document.getElementById('keypad-clear');
+            
+            keypadButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    keypadDisplay.textContent += button.textContent;
+                    if (audioEnabled) {
+                        const note = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'A3'][Math.floor(Math.random() * 11)];
+                        keySynth.triggerAttackRelease(note, '16n');
+                    }
+                });
+            });
+            keypadClear.addEventListener('click', () => {
+                keypadDisplay.textContent = '';
+                if (audioEnabled) {
+                    keySynth.triggerAttackRelease('C3', '8n');
+                }
+            });
+
+            // --- 7. Bubble Wrap ---
+            const bubbleWrap = document.getElementById('bubble-wrap');
+            const bubbleReset = document.getElementById('bubble-reset');
+            const numBubbles = 64; // 8x8 grid
+            
+            function createBubbles() {
+                bubbleWrap.innerHTML = ''; // Clear existing
+                for (let i = 0; i < numBubbles; i++) {
+                    const bubble = document.createElement('div');
+                    bubble.classList.add('bubble', 'bg-blue-500', 'hover:bg-blue-400');
+                    bubble.dataset.popped = 'false';
+                    bubble.addEventListener('click', () => popBubble(bubble));
+                    bubbleWrap.appendChild(bubble);
+                }
+            }
+            
+            function popBubble(bubble) {
+                if (bubble.dataset.popped === 'false') {
+                    bubble.dataset.popped = 'true';
+                    bubble.classList.remove('bg-blue-500', 'hover:bg-blue-400');
+                    bubble.classList.add('bg-gray-600', 'popped');
+                    if (audioEnabled) {
+                        // popSynth.triggerAttackRelease('C2', '8n'); // Old sound
+                        popSynth.triggerAttackRelease('C5', '16n'); // NEW: Higher, shorter "pop"
+                    }
+                }
+            }
+            
+            bubbleReset.addEventListener('click', () => {
+                createBubbles();
+                if (audioEnabled) {
+                    toggleSynth.triggerAttackRelease('G5', '16n');
+                }
+            });
+            createBubbles(); // Initial creation
+
+            // --- 8. More Sliders ---
+            const vSlider = document.getElementById('vertical-slider');
+            const vSliderValue = document.getElementById('vertical-slider-value');
+            vSlider.addEventListener('input', () => {
+                vSliderValue.textContent = vSlider.value;
+                // NEW: Sound for vertical slider
+                if (audioEnabled) sliderSynth.triggerAttackRelease(200 + (vSlider.value * 2), '32n');
+            });
+
+            const hSlider = document.getElementById('horizontal-slider');
+            const hSliderValue = document.getElementById('horizontal-slider-value');
+            hSlider.addEventListener('input', () => {
+                hSliderValue.textContent = hSlider.value;
+                // NEW: Sound for horizontal slider
+                if (audioEnabled) sliderSynth.triggerAttackRelease(300 + (hSlider.value * 2), '32n');
+            });
+            
+            // --- 9. Random Color Clicker ---
+            const randomColorBox = document.getElementById('random-color-box');
+            randomColorBox.addEventListener('click', () => {
+                const r = Math.floor(Math.random() * 256);
+                const g = Math.floor(Math.random() * 256);
+                const b = Math.floor(Math.random() * 256);
+                randomColorBox.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+                if (audioEnabled) {
+                    clickSynth.triggerAttackRelease(['C4', 'E4', 'G4', 'A4'][Math.floor(Math.random() * 4)], '16n');
+                }
+            });
+            
+            // --- 10. Do Not Press ---
+            const dnpButton = document.getElementById('dnp-button');
+            const dnpMessage = document.getElementById('dnp-message');
+            const messages = [
+                "You pressed it!", 
+                "Why?", 
+                "Okay, fine.", 
+                "Stop that.", 
+                "Seriously?", 
+                "Alright, one more.", 
+                "You're persistent.",
+                "Okay, I give up."
+            ];
+            let dnpCount = 0;
+            dnpButton.addEventListener('click', () => {
+                dnpMessage.textContent = messages[dnpCount % messages.length];
+                dnpCount++;
+                if (audioEnabled) {
+                    // popSynth.triggerAttackRelease('G1', '8n'); // Old sound
+                    popSynth.triggerAttackRelease('G2', '8n'); // NEW: Adjusted for new synth
+                }
+            });
+            
+            // --- 11. Typing Zone ---
+            const typingArea = document.getElementById('typing-area');
+            const charCount = document.getElementById('char-count');
+            typingArea.addEventListener('input', () => {
+                const count = typingArea.value.length;
+                charCount.textContent = `${count} character${count !== 1 ? 's' : ''}`;
+            });
+            
+            // NEW: Sound for typing
+            typingArea.addEventListener('keydown', () => {
+                if (audioEnabled) {
+                    const note = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4'][Math.floor(Math.random() * 6)];
+                    typeSynth.triggerAttackRelease(note, '32n');
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>
