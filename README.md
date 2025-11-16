@@ -4,8 +4,6 @@ Welcome to the digital equivalent of a house of cards built during a mild earthq
 
 **Disclaimer:** Every line of code here has a 50-50 chance of working. It either works, or it doesn't. If you encounter a bug, that's not a bug; it's a feature. If the whole thing crashes your browser, consider it a feature with attitude.
 
----
-
 ## The "Projects"
 
 This collection contains a couple of web-based games that were coded with more hope than skill.
@@ -24,8 +22,6 @@ This collection contains a couple of web-based games that were coded with more h
 -   **The Twist:** It's about "BluCoin," which is definitely not a real cryptocurrency. Don't try to cash out.
 -   **The Bullshit:** The save/load system uses `localStorage` and a prayer. If your score vanishes, consider it a market crash. The background music is supposed to start after your first click, but it might have other plans. The mute button is your only real friend here. The game's balance is non-existent; have fun.
 
----
-
 ### 3. Fidget Page
 
 -   **File:** `fidget-page/index.html`
@@ -40,7 +36,12 @@ This collection contains a couple of web-based games that were coded with more h
 -   **The Twist:** Why would you let a user *type* their phone number when you can make them *discover* it? This form features a range slider for the number input, forcing you to painstakingly drag your way to the correct 10-digit sequence from a pool of 9 billion possibilities.
 -   **The Bullshit:** The country code dropdown is a beautiful decoy, lulling you into a false sense of security before you're confronted with the slider. The entire functionality hinges on a single line of inline JavaScript: `oninput="phone.value = slider.value"`. It's both minimalist and a crime against usability.
 
----
+### 5. Typing Racer Pro
+
+-   **File:** `Typing Racer/index.html`
+-   **The Vibe:** A surprisingly functional typing game where you race against bots with questionable ethics.
+-   **The Twist:** Buy upgrades, freeze your opponents, and grind for cash. It's a feature-rich descent into madness, all to prove you can type slightly faster than a script.
+-   **The Bullshit:** The bots have a chance to freeze *you*. You can buy "Hand Warmers" to block their attacks, which is a feature that was definitely planned from the start and not added in a panic. The game's economy is balanced on a knife's edge, and the save system will probably remember your cash. Probably.
 
 ## How to Run This Masterpiece
 

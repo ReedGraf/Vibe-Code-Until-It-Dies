@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Racer Pro</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Tone.js for sounds -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <style>
+        /* Custom styles for the game */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Style for the typing area */
+        #text-to-type {
+            font-family: 'Courier New', Courier, monospace;
+            letter-spacing: 1px;
+            line-height: 1.8;
+        }
+        /* Cursor for the current character */
+        .cursor {
+            animation: blink 1s infinite;
+            border-left: 2px solid #F59E0B; /* amber-500 */
+            margin-left: -2px; /* Keep cursor from shifting layout */
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        /* Racer track styles */
+        .track {
+            border-bottom: 2px dashed #4B5563; /* gray-600 */
+        }
+        .racer {
+            transition: transform 0.2s linear;
+        }
+        
+        /* Modal styles */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.75);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+
+    <!-- Main Game Container -->
+    <div class="w-full max-w-4xl bg-gray-800 rounded-lg shadow-2xl p-6 relative">
+
+        <!-- Header: Title, Cash, Shop -->
+        <header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-gray-700">
+            <h1 class="text-3xl font-bold text-yellow-400 mb-2 sm:mb-0">Typing Racer Pro</h1>
+            <div class="flex items-center space-x-6">
+                <div class="text-xl">
+                    Cash: $<span id="cash-display">0</span>
+                </div>
+                <button id="shop-button" class="bg-yellow-500 text-gray-900 font-bold py-2 px-4 rounded-lg hover:bg-yellow-400 transition duration-200">
+                    Shop
+                </button>
+            </div>
+        </header>
+
+        <!-- Game Message Area -->
+        <div id="game-message" class="absolute top-1/3 left-1/2 -translate-x-1/2 z-50 p-4 bg-black bg-opacity-75 rounded-lg text-yellow-400 text-2xl font-bold hidden">
+            Message
+        </div>
+
+        <!-- Race Track Area -->
+        <div id="race-track" class="space-y-4 mb-6 p-4 bg-gray-700 rounded-lg">
+            <!-- Player's Track -->
+            <div class="track relative h-12">
+                <div id="player-racer" class="racer absolute top-0 left-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-10 h-10 text-blue-400">
+                        <path fill-rule="evenodd" d="M4.5 3.75a3 3 0 00-3 3v10.5a3 3 0 003 3h15a3 3 0 003-3V6.75a3 3 0 00-3-3h-15zm4.125 3a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5zm-3 8.25a.75.75 0 000 1.5h13.5a.75.75 0 000-1.5H5.625z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="absolute -top-4 left-1 text-xs font-semibold">YOU</span>
+                </div>
+            </div>
+            <!-- Bot 1's Track -->
+            <div class="track relative h-12">
+                <div id="bot1-racer" class="racer absolute top-0 left-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-10 h-10 text-red-400">
+                        <path d="M12.378 1.602a.75.75 0 00-.756 0L3 7.23V13.5a.75.75 0 00.75.75h16.5a.75.75 0 00.75-.75V7.23l-8.622-5.628zM12 15a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" />
+                        <path d="M3.283 15.066c-.08.06-.16.124-.236.192V18a3 3 0 003 3h15a3 3 0 003-3v-2.742c-.076-.068-.156-.132-.236-.192H3.283z" />
+                    </svg>
+                    <span class="absolute -top-4 left-1 text-xs font-semibold">Bot 1</span>
+                </div>
+            </div>
+            <!-- Bot 2's Track -->
+            <div class="track relative h-12">
+                <div id="bot2-racer" class="racer absolute top-0 left-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-10 h-10 text-green-400">
+                         <path d="M12.378 1.602a.75.75 0 00-.756 0L3 7.23V13.5a.75.75 0 00.75.75h16.5a.75.75 0 00.75-.75V7.23l-8.622-5.628zM12 15a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" />
+                        <path d="M3.283 15.066c-.08.06-.16.124-.236.192V18a3 3 0 003 3h15a3 3 0 003-3v-2.742c-.076-.068-.156-.132-.236-.192H3.283z" />
+                    </svg>
+                    <span class="absolute -top-4 left-1 text-xs font-semibold">Bot 2</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Typing Area -->
+        <div class="mb-4 relative"> <!-- Added relative class -->
+            <div id="text-to-type" class="text-2xl p-4 bg-gray-900 rounded-lg h-36 overflow-y-auto select-none">
+                <!-- Text spans will be generated here -->
+            </div>
+            <!-- Player Freeze Overlay -->
+            <div id="player-freeze-overlay" class="absolute inset-0 bg-cyan-500 bg-opacity-75 flex items-center justify-center text-white text-3xl font-bold rounded-lg hidden" style="backdrop-filter: blur(2px);">
+                FROZEN
+            </div>
+            <!-- Hidden input to capture key presses -->
+            <input type="text" id="game-input" class="absolute opacity-0" style="top: -1000px;" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        </div>
+        
+        <!-- Game Stats -->
+        <div class="flex justify-between items-center text-lg">
+            <div class="font-semibold">
+                WPM: <span id="wpm-display" class="text-yellow-400">0</span>
+            </div>
+            <div class="font-semibold">
+                Accuracy: <span id="accuracy-display" class="text-green-400">100</span>%
+            </div>
+            <div class="font-semibold" id="autocomplete-stats" style="display: none;">
+                Autocompletes: <span id="autocomplete-left-display" class="text-blue-400">0</span>
+            </div>
+            <div class="font-semibold" id="freeze-stats" style="display: none;">
+                Freezes: <span id="freeze-left-display" class="text-cyan-400">0</span>
+            </div>
+            <div class="font-semibold" id="hand-warmer-stats" style="display: none;">
+                Warmers: <span id="hand-warmer-left-display" class="text-orange-400">0</span>
+            </div>
+            <button id="reset-button" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-500 transition duration-200">
+                New Race
+            </button>
+        </div>
+
+    </div> <!-- End Main Game Container -->
+
+    <!-- Shop Modal -->
+    <div id="shop-modal" class="fixed inset-0 z-50 items-center justify-center hidden">
+        <div class="modal-backdrop fixed inset-0"></div>
+        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 w-full max-w-md relative z-10">
+            <h2 class="text-3xl font-bold text-center mb-6 text-yellow-400">Upgrades Shop</h2>
+            
+            <!-- Upgrade Item -->
+            <div class="bg-gray-700 rounded-lg p-6 flex justify-between items-center mb-4">
+                <div>
+                    <h3 class="text-xl font-semibold">Autocomplete</h3>
+                    <p id="autocomplete-desc" class="text-gray-400 text-sm">Press [Tab] to finish the current word.</p>
+                </div>
+                <button id="buy-autocomplete-button" class="bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-400 transition duration-200" data-base-cost="100">
+                    Buy ($100)
+                </button>
+            </div>
+            
+            <!-- New Freeze Upgrade Item -->
+            <div class="bg-gray-700 rounded-lg p-6 flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-semibold">Bot Freeze</h3>
+                    <p id="freeze-desc" class="text-gray-400 text-sm">Press [1] to freeze the lead bot.</p>
+                </div>
+                <button id="buy-freeze-button" class="bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-cyan-400 transition duration-200" data-base-cost="100">
+                    Buy ($100)
+                </button>
+            </div>
+            
+            <!-- Hand Warmer Item -->
+            <div class="bg-gray-700 rounded-lg p-6 flex justify-between items-center mt-4">
+                <div>
+                    <h3 class="text-xl font-semibold">Hand Warmer</h3>
+                    <p id="hand-warmer-desc" class="text-gray-400 text-sm">Blocks one bot freeze. (Consumable)</p>
+                </div>
+                <button id="buy-hand-warmer-button" class="bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-400 transition duration-200" data-cost="150">
+                    Buy ($150)
+                </button>
+            </div>
+
+            <button id="close-shop-button" class="mt-8 w-full bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-400 transition duration-200">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Results Modal -->
+    <div id="results-modal" class="fixed inset-0 z-50 items-center justify-center hidden">
+        <div class="modal-backdrop fixed inset-0"></div>
+        <div class="bg-gray-800 rounded-lg shadow-2xl p-8 w-full max-w-md relative z-10 text-center">
+            <h2 id="results-title" class="text-3xl font-bold mb-4">You Win!</h2>
+            <p id="results-message" class="text-lg mb-4">You earned $50!</p>
+            <p class="text-lg mb-6">
+                Final WPM: <span id="final-wpm" class="text-yellow-400 font-bold">0</span> | 
+                Accuracy: <span id="final-accuracy" class="text-green-400 font-bold">100</span>%
+            </p>
+            <button id="play-again-button" class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-400 transition duration-200">
+                Play Again
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const textToTypeEl = document.getElementById('text-to-type');
+            const gameInputEl = document.getElementById('game-input');
+            const wpmDisplayEl = document.getElementById('wpm-display');
+            const accuracyDisplayEl = document.getElementById('accuracy-display');
+            const resetButtonEl = document.getElementById('reset-button');
+            const cashDisplayEl = document.getElementById('cash-display');
+            
+            // Racers
+            const playerRacerEl = document.getElementById('player-racer');
+            const bot1RacerEl = document.getElementById('bot1-racer');
+            const bot2RacerEl = document.getElementById('bot2-racer');
+            const raceTrackEl = document.getElementById('race-track');
+
+            // Modals
+            const shopButtonEl = document.getElementById('shop-button');
+            const shopModalEl = document.getElementById('shop-modal');
+            const closeShopButtonEl = document.getElementById('close-shop-button');
+            const buyAutocompleteButtonEl = document.getElementById('buy-autocomplete-button');
+            const buyFreezeButtonEl = document.getElementById('buy-freeze-button'); // New
+            const buyHandWarmerButtonEl = document.getElementById('buy-hand-warmer-button'); // New
+            
+            const resultsModalEl = document.getElementById('results-modal');
+            const resultsTitleEl = document.getElementById('results-title');
+            const resultsMessageEl = document.getElementById('results-message');
+            const finalWpmEl = document.getElementById('final-wpm');
+            const finalAccuracyEl = document.getElementById('final-accuracy');
+            const playAgainButtonEl = document.getElementById('play-again-button');
+
+            // Autocomplete Stats
+            const autocompleteStatsEl = document.getElementById('autocomplete-stats');
+            const autocompleteLeftDisplayEl = document.getElementById('autocomplete-left-display');
+            const autocompleteDescEl = document.getElementById('autocomplete-desc');
+            
+            // New Freeze Stats
+            const freezeStatsEl = document.getElementById('freeze-stats');
+            const freezeLeftDisplayEl = document.getElementById('freeze-left-display');
+            const freezeDescEl = document.getElementById('freeze-desc');
+            
+            // New Hand Warmer Stats
+            const handWarmerStatsEl = document.getElementById('hand-warmer-stats');
+            const handWarmerLeftDisplayEl = document.getElementById('hand-warmer-left-display');
+            const handWarmerDescEl = document.getElementById('hand-warmer-desc');
+            
+            // Player Freeze Overlay
+            const playerFreezeOverlayEl = document.getElementById('player-freeze-overlay');
+            
+            // Game Message
+            const gameMessageEl = document.getElementById('game-message'); // New
+            let messageTimer = null; // New
+
+            // Audio
+            let keySynth = null;
+            let backspaceSynth = null;
+
+            function initAudio() {
+                if (!keySynth && window.Tone) {
+                    keySynth = new Tone.Synth({
+                        oscillator: { type: 'sine' }, // Changed from 'square'
+                        envelope: { attack: 0.005, decay: 0.05, sustain: 0, release: 0.2 }, // Softened attack/release
+                        volume: -10 // Made it louder (was -18)
+                    }).toDestination();
+                    
+                    backspaceSynth = new Tone.Synth({
+                        oscillator: { type: 'sine' }, // Changed from 'triangle'
+                        envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.2 }, // Softened attack/release
+                        volume: -8 // Made it louder (was -16)
+                    }).toDestination();
+                }
+            }
+            
+            function playKeySound() {
+                initAudio(); // Ensure synth is created
+                if (keySynth) {
+                    // Vary the pitch slightly to avoid monotony
+                    const pitch = ["C4", "D4", "E4"][Math.floor(Math.random() * 3)]; // Lowered pitch from C5
+                    keySynth.triggerAttackRelease(pitch, "32n");
+                }
+            }
+            
+            function playBackspaceSound() {
+                initAudio(); // Ensure synth is created
+                if (backspaceSynth) {
+                    backspaceSynth.triggerAttackRelease("C3", "16n"); // Lowered pitch from C4
+                }
+            }
+
+            // Game State
+            let textToType = '';
+            let userInput = '';
+            let gameStatus = 'waiting'; // waiting, running, finished
+            let startTime = 0;
+            let errors = 0;
+            let totalTyped = 0;
+            let gameInterval = null;
+            let autocompleteUsesRemaining = 0;
+            let freezeUsesRemaining = 0; // New
+            let handWarmersRemaining = 0; // New
+            let playerIsFrozen = false; // New
+            let playerFreezeTimer = 0; // New
+            
+            const wordBank = [ // Replaces const quotes
+                "the", "be", "to", "of", "and", "a", "in", "that", "have", "I", "it", "for", "not", "on", "with", "he", "as", "you", "do", "at",
+                "this", "but", "his", "by", "from", "they", "we", "say", "her", "she", "or", "an", "will", "my", "one", "all", "would", "there", "their", "what",
+                "so", "up", "out", "if", "about", "who", "get", "which", "go", "me", "when", "make", "can", "like", "time", "no", "just", "him", "know", "take",
+                "person", "into", "year", "your", "good", "some", "could", "them", "see", "other", "than", "then", "now", "look", "only", "come", "its", "over", "think",
+                "also", "back", "after", "use", "two", "how", "our", "work", "first", "well", "way", "even", "new", "want", "because", "any", "these", "give", "day",
+                "most", "us", "fast", "quick", "jump", "brown", "lazy", "dog", "fox", "over", "race", "speed", "type", "keyboard", "code", "programming", "game",
+                "player", "bot", "win", "lose", "upgrade", "shop", "cash", "money", "level", "difficulty", "opportunity", "journey", "technology", "revolutionized"
+            ];
+
+            // Bot State
+            const bots = [
+                { id: 1, el: bot1RacerEl, wpm: 40, position: 0, isFrozen: false, freezeTimer: 0 },
+                { id: 2, el: bot2RacerEl, wpm: 55, position: 0, isFrozen: false, freezeTimer: 0 }
+            ];
+
+            // Player State (loaded from localStorage)
+            let playerState = {
+                cash: 0,
+                upgrades: {
+                    autocompleteLevel: 0, // Changed from autocomplete: false
+                    freezeLevel: 0 // New
+                },
+                consumables: { // New
+                    handWarmers: 0
+                }
+            };
+            
+            // --- Local Storage Functions ---
+            function loadData() {
+                const data = localStorage.getItem('typingRacerProData');
+                if (data) {
+                    playerState = JSON.parse(data);
+                    // Add default for new properties if loading old save
+                    if (!playerState.consumables) {
+                        playerState.consumables = { handWarmers: 0 };
+                    }
+                }
+                updateUI();
+            }
+
+            function saveData() {
+                localStorage.setItem('typingRacerProData', JSON.stringify(playerState));
+                updateUI();
+            }
+
+            function updateUI() {
+                cashDisplayEl.textContent = playerState.cash;
+                updateAutocompleteDisplay();
+                updateFreezeDisplay(); // New
+                updateHandWarmerDisplay(); // New
+                updateShopButton();
+                updateFreezeShopButton(); // New
+                updateHandWarmerShopButton(); // New
+            }
+            
+            function updateAutocompleteDisplay() {
+                if (playerState.upgrades.autocompleteLevel > 0) {
+                    autocompleteStatsEl.style.display = 'block';
+                    autocompleteLeftDisplayEl.textContent = autocompleteUsesRemaining;
+                } else {
+                    autocompleteStatsEl.style.display = 'none';
+                }
+            }
+            
+            // New function for freeze display
+            function updateFreezeDisplay() {
+                if (playerState.upgrades.freezeLevel > 0) {
+                    freezeStatsEl.style.display = 'block';
+                    freezeLeftDisplayEl.textContent = freezeUsesRemaining;
+                } else {
+                    freezeStatsEl.style.display = 'none';
+                }
+            }
+            
+            // New function for hand warmer display
+            function updateHandWarmerDisplay() {
+                if (handWarmersRemaining > 0) {
+                    handWarmerStatsEl.style.display = 'block';
+                    handWarmerLeftDisplayEl.textContent = handWarmersRemaining;
+                } else {
+                    handWarmerStatsEl.style.display = 'none';
+                }
+            }
+            
+            function updateShopButton() {
+                const baseCost = parseInt(buyAutocompleteButtonEl.dataset.baseCost);
+                const currentLevel = playerState.upgrades.autocompleteLevel;
+                const nextLevelCost = baseCost * Math.pow(2, currentLevel); // 250, 500, 1000, 2000...
+    
+                if (currentLevel === 0) {
+                    buyAutocompleteButtonEl.textContent = `Buy ($${nextLevelCost})`;
+                    autocompleteDescEl.textContent = "Press [Tab] to finish the current word (1 use per race).";
+                } else {
+                    buyAutocompleteButtonEl.textContent = `Upgrade (Lvl ${currentLevel + 1}) ($${nextLevelCost})`;
+                    autocompleteDescEl.textContent = `Get ${currentLevel + 1} uses per race.`;
+                }
+    
+                if (playerState.cash < nextLevelCost) {
+                    buyAutocompleteButtonEl.disabled = true;
+                    buyAutocompleteButtonEl.classList.remove('bg-green-500', 'hover:bg-green-400');
+                    buyAutocompleteButtonEl.classList.add('bg-gray-500', 'cursor-not-allowed');
+                } else {
+                    buyAutocompleteButtonEl.disabled = false;
+                    buyAutocompleteButtonEl.classList.add('bg-green-500', 'hover:bg-green-400');
+                    buyAutocompleteButtonEl.classList.remove('bg-gray-500', 'cursor-not-allowed');
+                }
+            }
+            
+            // New function for freeze shop button
+            function updateFreezeShopButton() {
+                const baseCost = parseInt(buyFreezeButtonEl.dataset.baseCost);
+                const currentLevel = playerState.upgrades.freezeLevel;
+                const nextLevelCost = baseCost * Math.pow(2, currentLevel);
+    
+                if (currentLevel === 0) {
+                    buyFreezeButtonEl.textContent = `Buy ($${nextLevelCost})`;
+                    freezeDescEl.textContent = "Press [1] to freeze the lead bot (1 use per race).";
+                } else {
+                    buyFreezeButtonEl.textContent = `Upgrade (Lvl ${currentLevel + 1}) ($${nextLevelCost})`;
+                    freezeDescEl.textContent = `Get ${currentLevel + 1} uses per race.`;
+                }
+    
+                if (playerState.cash < nextLevelCost) {
+                    buyFreezeButtonEl.disabled = true;
+                    buyFreezeButtonEl.classList.remove('bg-cyan-500', 'hover:bg-cyan-400');
+                    buyFreezeButtonEl.classList.add('bg-gray-500', 'cursor-not-allowed');
+                } else {
+                    buyFreezeButtonEl.disabled = false;
+                    buyFreezeButtonEl.classList.add('bg-cyan-500', 'hover:bg-cyan-400');
+                    buyFreezeButtonEl.classList.remove('bg-gray-500', 'cursor-not-allowed');
+                }
+            }
+            
+            // New function for hand warmer shop button
+            function updateHandWarmerShopButton() {
+                const cost = parseInt(buyHandWarmerButtonEl.dataset.cost);
+                const currentAmount = playerState.consumables.handWarmers || 0;
+                
+                handWarmerDescEl.textContent = `Blocks one bot freeze. (Owned: ${currentAmount})`;
+                buyHandWarmerButtonEl.textContent = `Buy ($${cost})`;
+    
+                if (playerState.cash < cost) {
+                    buyHandWarmerButtonEl.disabled = true;
+                    buyHandWarmerButtonEl.classList.remove('bg-orange-500', 'hover:bg-orange-400');
+                    buyHandWarmerButtonEl.classList.add('bg-gray-500', 'cursor-not-allowed');
+                } else {
+                    buyHandWarmerButtonEl.disabled = false;
+                    buyHandWarmerButtonEl.classList.add('bg-orange-500', 'hover:bg-orange-400');
+                    buyHandWarmerButtonEl.classList.remove('bg-gray-500', 'cursor-not-allowed');
+                }
+            }
+
+            // --- Game Functions ---
+
+            function startNewGame() {
+                gameStatus = 'waiting';
+                userInput = '';
+                startTime = 0;
+                errors = 0;
+                totalTyped = 0;
+                if (gameInterval) clearInterval(gameInterval);
+                
+                autocompleteUsesRemaining = playerState.upgrades.autocompleteLevel;
+                freezeUsesRemaining = playerState.upgrades.freezeLevel; // New
+                handWarmersRemaining = playerState.consumables.handWarmers; // New
+                playerIsFrozen = false; // New
+                playerFreezeTimer = 0; // New
+                playerFreezeOverlayEl.style.display = 'none'; // New
+                playerRacerEl.classList.remove('opacity-50'); // New
+                gameInputEl.disabled = false; // New
+                
+                updateAutocompleteDisplay();
+                updateFreezeDisplay(); // New
+                updateHandWarmerDisplay(); // New
+                
+                // Reset bots
+                bots.forEach(bot => {
+                    bot.position = 0;
+                    bot.isFrozen = false; // New
+                    bot.freezeTimer = 0; // New
+                    bot.el.classList.remove('opacity-50'); // New
+                    // Give bots slightly random WPM each race
+                    bot.wpm = Math.floor(Math.random() * 30) + 30; // WPM between 30 and 60
+                });
+
+                // Get new quote
+                // textToType = quotes[Math.floor(Math.random() * quotes.length)]; // Old logic
+
+                // New logic: Generate text based on autocomplete level
+                const baseWords = 20;
+                const wordsPerLevel = 5;
+                const numWords = baseWords + (playerState.upgrades.autocompleteLevel * wordsPerLevel);
+                
+                let newText = [];
+                for (let i = 0; i < numWords; i++) {
+                    newText.push(wordBank[Math.floor(Math.random() * wordBank.length)]);
+                }
+                textToType = newText.join(' ');
+                
+                // Render text
+                renderText();
+                updateStats();
+                updateRacers();
+                
+                // Hide modals
+                resultsModalEl.style.display = 'none';
+                
+                // Focus input
+                gameInputEl.value = '';
+                gameInputEl.focus();
+            }
+            
+            function renderText() {
+                textToTypeEl.innerHTML = '';
+                textToType.split('').forEach((char, index) => {
+                    const span = document.createElement('span');
+                    span.textContent = char;
+                    span.id = `char-${index}`;
+                    
+                    const userChar = userInput[index];
+                    
+                    if (index < userInput.length) {
+                        // Character has been typed
+                        if (userChar === char) {
+                            span.className = 'text-green-400';
+                        } else {
+                            span.className = 'text-red-500 bg-red-900 rounded';
+                        }
+                    } else if (index === userInput.length) {
+                        // Current cursor position
+                        span.className = 'text-gray-300 cursor';
+                    } else {
+                        // Upcoming text
+                        span.className = 'text-gray-500';
+                    }
+                    
+                    textToTypeEl.appendChild(span);
+                });
+            }
+            
+            function startGameLoop() {
+                gameStatus = 'running';
+                startTime = Date.now();
+                gameInterval = setInterval(gameTick, 100); // Update every 100ms
+            }
+            
+            function gameTick() {
+                if (gameStatus !== 'running') return;
+                
+                // Handle player freeze logic
+                if (playerIsFrozen) {
+                    playerFreezeTimer--;
+                    if (playerFreezeTimer <= 0) {
+                        playerIsFrozen = false;
+                        playerFreezeOverlayEl.style.display = 'none';
+                        playerRacerEl.classList.remove('opacity-50');
+                        gameInputEl.disabled = false;
+                        gameInputEl.focus(); // Re-focus input
+                    }
+                }
+                
+                // Update stats
+                updateStats();
+                
+                // Update bots
+                const textLength = textToType.length;
+                let botFinished = false;
+                
+                bots.forEach(bot => {
+                    // Handle freeze logic
+                    if (bot.isFrozen) {
+                        bot.freezeTimer--;
+                        if (bot.freezeTimer <= 0) {
+                            bot.isFrozen = false;
+                            bot.el.classList.remove('opacity-50');
+                        }
+                        return; // Skip movement if frozen
+                    }
+                    
+                    // NEW: Bot attack logic
+                    // Only if player is not already frozen and bot is not frozen
+                    if (!playerIsFrozen && gameStatus === 'running') {
+                        // Example: 1 in 500 chance per tick (e.g., 2% chance per second)
+                        const playerProgress = userInput.length / textToType.length;
+                        const botProgress = bot.position / textToType.length;
+                        let freezeChance = 0.001; // Base chance 1/1000
+
+                        if (playerProgress > botProgress) {
+                            freezeChance = 0.003; // 3x chance if player is ahead of this bot
+                        }
+
+                        if (Math.random() < freezeChance) {
+                            freezePlayer(bot);
+                        }
+                    }
+                
+                    // Avg word is 5 chars. WPM * 5 = CPM.
+                    const charsPerSecond = (bot.wpm * 5) / 60;
+                    const charsPerTick = charsPerSecond / 10; // 10 ticks per second
+                    bot.position += charsPerTick + (Math.random() * 0.2 - 0.1); // Add slight randomness
+                    
+                    if (bot.position >= textLength && !botFinished) {
+                        botFinished = true;
+                        endGame(false, bot); // A bot won
+                    }
+                });
+                
+                // Update UI
+                updateRacers();
+            }
+
+            function updateStats() {
+                if (startTime === 0) {
+                    wpmDisplayEl.textContent = 0;
+                    accuracyDisplayEl.textContent = 100;
+                    return;
+                }
+                
+                const elapsedTime = (Date.now() - startTime) / 1000 / 60; // in minutes
+                
+                // Calculate correct characters for WPM
+                let correctChars = 0;
+                for(let i = 0; i < userInput.length; i++) {
+                    if (userInput[i] === textToType[i]) {
+                        correctChars++;
+                    }
+                }
+
+                const wpm = elapsedTime > 0 ? Math.floor((correctChars / 5) / elapsedTime) : 0;
+                const accuracy = totalTyped > 0 ? Math.floor(((totalTyped - errors) / totalTyped) * 100) : 100;
+                
+                wpmDisplayEl.textContent = wpm;
+                accuracyDisplayEl.textContent = accuracy;
+            }
+
+            function updateRacers() {
+                const textLength = textToType.length;
+                const trackWidth = raceTrackEl.clientWidth - 40; // Subtract racer width
+                
+                // Update Player
+                const playerProgress = (userInput.length / textLength);
+                playerRacerEl.style.transform = `translateX(${playerProgress * trackWidth}px)`;
+
+                // Update Bots
+                bots.forEach(bot => {
+                    const botProgress = (bot.position / textLength);
+                    bot.el.style.transform = `translateX(${botProgress * trackWidth}px)`;
+                });
+            }
+
+            function endGame(playerWon, bot = null) {
+                if (gameStatus === 'finished') return; // Prevent multiple ends
+                
+                gameStatus = 'finished';
+                clearInterval(gameInterval);
+                
+                const finalWPM = wpmDisplayEl.textContent;
+                const finalAccuracy = accuracyDisplayEl.textContent;
+                
+                finalWpmEl.textContent = finalWPM;
+                finalAccuracyEl.textContent = finalAccuracy;
+                
+                if (playerWon) {
+                    const cashWon = Math.floor(parseInt(finalWPM) * 0.5 + parseInt(finalAccuracy) * 0.2);
+                    playerState.cash += cashWon;
+                    
+                    resultsTitleEl.textContent = 'You Win!';
+                    resultsMessageEl.textContent = `Congratulations! You earned $${cashWon}!`;
+                    resultsTitleEl.classList.remove('text-red-400');
+                    resultsTitleEl.classList.add('text-green-400');
+                } else {
+                    resultsTitleEl.textContent = 'You Lose!';
+                    resultsMessageEl.textContent = `Bot ${bot.id} finished first. Better luck next time!`;
+                    resultsTitleEl.classList.remove('text-green-400');
+                    resultsTitleEl.classList.add('text-red-400');
+                }
+                
+                saveData();
+                resultsModalEl.style.display = 'flex';
+            }
+            
+            // New function to freeze a bot
+            function freezeABot() {
+                // Find eligible bots (not already frozen)
+                const eligibleBots = bots.filter(bot => !bot.isFrozen);
+                if (eligibleBots.length === 0) return; // No one to freeze
+
+                // Sort by position (descending) to find the leader
+                eligibleBots.sort((a, b) => b.position - a.position);
+                
+                const botToFreeze = eligibleBots[0];
+                
+                botToFreeze.isFrozen = true;
+                botToFreeze.freezeTimer = 30; // 30 ticks = 3 seconds (100ms interval)
+                botToFreeze.el.classList.add('opacity-50');
+            }
+            
+            // New function for bot to freeze player
+            function freezePlayer(bot) {
+                // NEW: Check for Hand Warmer
+                if (handWarmersRemaining > 0) {
+                    handWarmersRemaining--;
+                    playerState.consumables.handWarmers--; // Consume one from persistent state
+                    saveData(); // Save the new, lower quantity
+                    updateHandWarmerDisplay();
+                    
+                    // New: Add visual feedback
+                    showGameMessage("Freeze Blocked!"); 
+                    return; // Freeze blocked!
+                }
+                
+                if (playerIsFrozen) return; // Can't be frozen twice
+
+                playerIsFrozen = true;
+                playerFreezeTimer = 20; // 20 ticks = 2 seconds
+                playerFreezeOverlayEl.style.display = 'flex';
+                playerRacerEl.classList.add('opacity-50');
+                gameInputEl.disabled = true; // Disable the input field
+            }
+            
+            // New function to show a temporary game message
+            function showGameMessage(msg) {
+                gameMessageEl.textContent = msg;
+                gameMessageEl.style.display = 'block';
+                
+                if (messageTimer) clearTimeout(messageTimer);
+                messageTimer = setTimeout(() => {
+                    gameMessageEl.style.display = 'none';
+                }, 1500); // Show for 1.5 seconds
+            }
+
+            // --- Event Handlers ---
+
+            // Main game input handler
+            gameInputEl.addEventListener('keydown', (e) => {
+                // Start audio context on first keydown (required by browsers)
+                if (window.Tone && Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+
+                if (gameStatus === 'finished' || playerIsFrozen) { // Added playerIsFrozen
+                    e.preventDefault();
+                 return;
+            }
+            
+            // Handle Autocomplete (Tab)
+            if (e.key === 'Tab' && autocompleteUsesRemaining > 0) {
+                e.preventDefault();
+                
+                // Don't autocomplete if game isn't running or finished
+                if (gameStatus === 'finished') return; 
+                
+                // Start game if it was waiting
+                if (gameStatus === 'waiting') {
+                    startGameLoop();
+                }
+
+                autocompleteUsesRemaining--;
+                updateAutocompleteDisplay();
+
+                // Find the end of the current word
+                let currentWordEnd = textToType.indexOf(' ', userInput.length);
+                if (currentWordEnd === -1) {
+                    // It's the last word
+                    currentWordEnd = textToType.length;
+                }
+                
+                // Get the word fragment to add (only the correct characters)
+                const correctFragment = textToType.substring(userInput.length, currentWordEnd);
+                
+                // Add the new characters to totalTyped. We assume 0 errors for autocomplete.
+                totalTyped += correctFragment.length;
+                
+                // Manually update input and state, as .value = '' doesn't fire 'input'
+                userInput = userInput + correctFragment;
+                gameInputEl.value = userInput;
+
+                renderText();
+                updateRacers();
+
+                // Check for win
+                if (userInput.length === textToType.length) {
+                    if (userInput === textToType) {
+                        endGame(true);
+                    }
+                }
+                
+                return;
+            }
+            
+            // Prevent tabbing away even if uses are 0, if upgrade is owned
+            if (e.key === 'Tab' && playerState.upgrades.autocompleteLevel > 0) {
+                e.preventDefault();
+                return;
+            }
+            
+            // Handle Freeze (Key '1')
+            if (e.key === '1' && freezeUsesRemaining > 0) {
+                e.preventDefault();
+                freezeUsesRemaining--;
+                updateFreezeDisplay();
+                freezeABot();
+                return;
+            }
+            
+            // Prevent default action for '1' if freeze is owned (even if 0 uses)
+            if (e.key === '1' && playerState.upgrades.freezeLevel > 0) {
+                 e.preventDefault();
+                 return;
+            }
+            
+            // Block other number keys ('0', '2'-'9')
+            if (e.key >= '0' && e.key <= '9') {
+                e.preventDefault();
+                return;
+            }
+            
+            // Handle Backspace
+            if (e.key === 'Backspace') {
+                    playBackspaceSound();
+                    // Don't prevent default, let the input field handle it
+                } 
+                
+                // Ignore special keys (except Tab and Backspace)
+                if (e.key.length > 1 && e.key !== 'Backspace') {
+                    e.preventDefault();
+                    return;
+                }
+                
+                // If we are here, it's a standard typing key (letter, space, punctuation)
+                // Backspace also falls through, so check it's not backspace
+                if (e.key.length === 1) {
+                    playKeySound();
+                }
+            });
+            
+            gameInputEl.addEventListener('input', (e) => {
+                if (gameStatus === 'finished' || playerIsFrozen) return; // Added playerIsFrozen
+
+                // Start game on first input
+                if (gameStatus === 'waiting') {
+                    startGameLoop(); // This sets gameStatus = 'running'
+                }
+                
+                // gameStatus is now 'running'
+                
+                const typedValue = gameInputEl.value;
+                
+                // Calculate errors
+                if (typedValue.length > userInput.length) {
+                    // Character added
+                    totalTyped++;
+                    const newCharIndex = typedValue.length - 1;
+                    if (newCharIndex < textToType.length && typedValue[newCharIndex] !== textToType[newCharIndex]) {
+                        errors++;
+                    }
+                }
+                
+                userInput = typedValue;
+                renderText();
+                updateRacers();
+
+                // Check for win
+                if (userInput.length === textToType.length) {
+                    // Only end game if the text is correct
+                    if (userInput === textToType) {
+                        endGame(true);
+                    }
+                }
+            });
+            
+            // Keep input focused
+            document.body.addEventListener('click', (e) => {
+                // Don't steal focus from shop buttons
+                if (e.target.closest('#shop-modal') || e.target.closest('#shop-button')) {
+                    return;
+                }
+                gameInputEl.focus();
+            });
+            
+            // Reset / Play Again
+            resetButtonEl.addEventListener('click', startNewGame);
+            playAgainButtonEl.addEventListener('click', startNewGame);
+
+            // --- Shop Modal Handlers ---
+            shopButtonEl.addEventListener('click', () => {
+                shopModalEl.style.display = 'flex';
+                updateShopButton(); // Ensure button state is correct when opening
+                updateFreezeShopButton();
+                updateHandWarmerShopButton();
+            });
+            
+            closeShopButtonEl.addEventListener('click', () => {
+                shopModalEl.style.display = 'none';
+                gameInputEl.focus(); // Return focus to game
+            });
+
+            buyAutocompleteButtonEl.addEventListener('click', () => {
+                const baseCost = parseInt(buyAutocompleteButtonEl.dataset.baseCost);
+                const currentLevel = playerState.upgrades.autocompleteLevel;
+                const nextLevelCost = baseCost * Math.pow(2, currentLevel);
+    
+                if (playerState.cash >= nextLevelCost) {
+                    playerState.cash -= nextLevelCost;
+                    playerState.upgrades.autocompleteLevel++;
+                    saveData(); // saveData() calls updateUI() which calls updateShopButton()
+                }
+            });
+            
+            // New listener for hand warmer button
+            buyHandWarmerButtonEl.addEventListener('click', () => {
+                const cost = parseInt(buyHandWarmerButtonEl.dataset.cost);
+    
+                if (playerState.cash >= cost) {
+                    playerState.cash -= cost;
+                    playerState.consumables.handWarmers++;
+                    saveData();
+                }
+            });
+            
+            // New listener for freeze button
+            buyFreezeButtonEl.addEventListener('click', () => {
+                const baseCost = parseInt(buyFreezeButtonEl.dataset.baseCost);
+                const currentLevel = playerState.upgrades.freezeLevel;
+                const nextLevelCost = baseCost * Math.pow(2, currentLevel);
+    
+                if (playerState.cash >= nextLevelCost) {
+                    playerState.cash -= nextLevelCost;
+                    playerState.upgrades.freezeLevel++;
+                    saveData();
+                }
+            });
+
+            // --- Initial Load ---
+            loadData();
+            startNewGame();
+        });
+    </script>
+</body>
+</html>
